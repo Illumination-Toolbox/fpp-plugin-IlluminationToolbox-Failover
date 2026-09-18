@@ -166,18 +166,33 @@ itself.
 ## Verified against real FPP
 
 The plugin has been run on FPP 10.0 (the official `falconchristmas/fpp:latest`
-image) as three containers - primary, backup and remote - on one network. What
-was exercised there: building against the real headers, loading and unloading
-into a live `fppd` without a restart, peer discovery, the hold playlist
-blocking the standby's scheduler, failover in under 4 seconds resuming at the
-item the primary was on, graceful fail-back at an item boundary, the witness
-check vetoing a takeover, MultiSync heartbeats, and the content pipeline's
-check, promote, snapshot and rollback against FPP's own rsync daemon.
+image) as three containers - primary, backup and remote - on one network,
+playing a real 2.5-minute, 91k-channel, 40fps `.fseq`.
 
-Not yet exercised anywhere: the hot-standby path (a backup booted in Remote
-mode taking over mid-sequence as the sync source). It needs real `.fseq`
-content and a show running long enough to interrupt, which the container lab
-could not provide.
+Verified there: building against the real headers; loading and unloading into a
+live `fppd` with no restart; peer discovery; the hold playlist blocking the
+standby's scheduler; cold failover resuming at the item the primary was on;
+graceful fail-back at an item boundary; the witness check vetoing a takeover and
+then releasing it when its evidence went stale; MultiSync heartbeats; and the
+content pipeline's check, promote, snapshot and rollback against FPP's own rsync
+daemon.
+
+**Hot standby, measured.** With the backup booted in Remote mode and mirroring a
+real sequence, the primary was killed 16 seconds into the song. An independent
+remote node was sampled once a second throughout:
+
+```
+t+5s   playing HotChocolate.fseq  21s  master=172.20.0.2
+t+7s   playing HotChocolate.fseq  23s  master=172.20.0.2   <- primary killed
+t+8s   playing HotChocolate.fseq  24s  master=172.20.0.3   <- backup is now the source
+t+9s   playing HotChocolate.fseq  25s  master=172.20.0.3
+```
+
+The sync source changed in about two seconds and the playback position never
+went backwards: the song did not restart, and the remote followed straight
+through the swap. When that sequence reached its end, the backup's own playlist
+picked up the next item and the remote followed that too, with the on-disk mode
+still reading `remote` the whole time.
 
 ## Things to know
 
@@ -189,8 +204,12 @@ could not provide.
   Remote (the on-disk setting is untouched). The plugin's status page shows the
   real state.
 - If the plugin is uninstalled or unloaded while the backup is acting as the
-  player, fppd is left in Player mode and a restart is flagged, because native
-  sync sending only comes back with a restart.
+  player, the running fppd stays in Player mode (the show is mid-flight) but
+  the on-disk mode is left as you configured it and a restart is flagged. After
+  that restart the node is a Remote-mode hot standby again. The mode is
+  deliberately not persisted: a backup that came back from a reboot as a second
+  full player would run the schedule against the primary and fight it for the
+  remotes.
 - Cold takeovers resume at item granularity. Mid-item seek is not attempted on
   a Player-mode node.
 

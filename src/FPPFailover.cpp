@@ -252,15 +252,22 @@ public:
         removeCommands();
         clearWarnings();
         if (m_forcePlayerMode) {
-            // We are acting as the player in memory.  Leave fppd in Player
-            // mode (persisted, so a restart comes back consistent) but native
-            // sync sending is off until fppd restarts, so say so.
-            setSetting("fppMode", "player", true);
+            // We are acting as the player in memory, on a box the user
+            // configured as a Remote-mode hot standby.  Deliberately do NOT
+            // persist that: writing fppMode=player would outlive this session
+            // and the box would come back from its next reboot as a second
+            // full player, running the schedule against the primary and
+            // fighting it for the remotes - with no plugin left to resolve it.
+            // The on-disk setting stays "remote" (what the user asked for) and
+            // the restart flag tells them the box needs a restart, after which
+            // it is a proper remote again.  Only the running process is left in
+            // player mode, because the show is mid-flight and cannot be moved.
             setSetting("restartFlag", "1");
             WarningHolder::AddWarningTimeout(3600, WARN_ID_SYNC,
-                                             "fpp-failover unloaded while acting as player; restart fppd to restore MultiSync",
+                                             "fpp-failover was unloaded while acting as the player; "
+                                             "restart fppd to return this node to Remote mode",
                                              {}, PLUGIN_NAME);
-            logEvent("Plugin unloading while acting as player - fppd restart needed for native MultiSync");
+            logEvent("Plugin unloading while acting as player - on-disk mode left as configured, fppd restart needed");
         }
         // Never leave the hold playlist behind: without the plugin it would
         // block this node's schedule forever.
@@ -1586,8 +1593,15 @@ private:
             break;
 
         case NodeState::Takeover:
-            if (fresh && m_peer.state == "active" && m_role == Role::Backup) {
-                yieldNow("primary is active");
+            // Only a poll that SUCCEEDED AFTER the takeover began says anything
+            // about the peer: we took over precisely because it went silent, and
+            // its last good poll is normally a second or two old at that moment.
+            // Trusting that stale "active" made the backup take over, yield, and
+            // take over again inside one second, churning the sync source under
+            // the remotes mid-song.
+            if (m_peer.lastOkMS > m_takeoverStartedMS && peerStateIsActive(m_peer.state) &&
+                m_role == Role::Backup) {
+                yieldNow("primary is active again");
             } else {
                 takeoverTick(now);
             }
