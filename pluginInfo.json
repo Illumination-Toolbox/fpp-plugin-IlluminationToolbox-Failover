@@ -1,0 +1,19 @@
+{
+	"$schema": "https://raw.githubusercontent.com/FalconChristmas/fpp-plugin-Template/master/pluginInfo.schema.json",
+	"repoName": "fpp-failover",
+	"name": "Player Failover",
+	"author": "James Arrowood",
+	"description": "Hot failover between two FPP players. The backup runs as an FPP remote, mirroring the primary, and when the primary dies it becomes the MultiSync source mid-song without a restart or a gap, then hands the show back when the primary returns. On remotes it shows which player is active, acts as a witness against false failovers, and can run a local fallback sequence when no player is alive.",
+	"homeURL": "https://github.com/jamesarrowood/fpp-failover",
+	"srcURL": "https://github.com/jamesarrowood/fpp-failover.git",
+	"bugURL": "https://github.com/jamesarrowood/fpp-failover/issues",
+	"allowUpdates": 1,
+	"versions": [
+		{
+			"minFPPVersion": "10.0",
+			"maxFPPVersion": "0",
+			"branch": "master",
+			"sha": ""
+		}
+	]
+}

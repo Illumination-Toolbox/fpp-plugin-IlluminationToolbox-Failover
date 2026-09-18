@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# fppd loads libfpp-failover.so at its own startup.  fpp_install.sh builds it,
+# and FPP's core-upgrade path rebuilds every plugin with a Makefile, so the
+# only case to handle here is the library being missing outright (for example
+# an SD image cloned from a machine of a different architecture).
+
+: "${SRCDIR:=/opt/fpp/src}"
+
+BASEDIR=$(dirname "$0")
+cd "$BASEDIR/.."
+
+if [ ! -f libfpp-failover.so ]; then
+    echo "fpp-failover: libfpp-failover.so is missing, rebuilding"
+    make "SRCDIR=${SRCDIR}"
+fi
