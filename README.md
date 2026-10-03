@@ -13,7 +13,8 @@ Remotes need nothing special; they follow whichever player is sending sync.
 Installing the plugin on remotes adds visibility, a witness check against false
 failovers, and an optional local fallback sequence.
 
-Requires FPP 10.0 or newer.
+Supports FPP 10.0, 10.1.x and 10.2, and is tested against each release; see
+[Tested FPP releases](#tested-fpp-releases).
 
 ## How it works
 
@@ -71,12 +72,15 @@ Open **Status/Control → Player Failover** on each node.
 
 **Primary player**
 
-- FPP mode: Player, MultiSync enabled, and turn on **Send MultiSync to ALL
-  remotes via Multicast** (or Broadcast). FPP's default is unicast only, which
-  it sends only to nodes its discovery cache currently believes are in Remote
-  mode. That cache goes stale for a long time after a node changes mode, and
-  while it is stale the backup and remotes receive no heartbeats, which
-  disables the witness check.
+- FPP mode: Player, with **MultiSync enabled - then restart fppd**. FPP reads
+  that setting only when fppd starts; turned on at runtime it is saved but the
+  player never opens its send socket, so the backup and remotes hear nothing.
+  The plugin's status page warns while this is the case.
+- Turn on **Send MultiSync to ALL remotes via Multicast** (or Broadcast). FPP's
+  default is unicast only, which it sends only to nodes its discovery cache
+  currently believes are in Remote mode. That cache goes stale for a long time
+  after a node changes mode, and while it is stale the backup and remotes
+  receive no heartbeats, which disables the witness check.
 - Role: *Primary player*
 - Peer address: the backup's IP
 - Fail-back: *Automatic* (default) or *Manual*
@@ -154,45 +158,64 @@ POST /api/plugin-apis/failover?action=rollbackContent {"snapshot": "<id>|latest"
 ```
 
 The action is given as a query parameter rather than a path segment
-(`/failover/status`). FPP 10.0 registers plugin subpath routes but does not
-dispatch them, so `/failover/status` returns 404 on that release; the reference
-plugin `fpp-brightness` has the same problem. The plugin still accepts the
-subpath form, and an `{"action": "..."}` body, for when that is fixed.
+(`/failover/status`) because that is the form that works on every FPP 10
+release. On FPP 10.0 to 10.1.x, a plugin loaded into a running fppd - which is
+what the Plugin Manager does on install and update - gets its routes registered
+with drogon after the server has started, and drogon never compiles late
+subpath routes, so `/failover/status` returns 404 until fppd restarts. The
+reference plugin `fpp-brightness` has the same problem. FPP 10.2 moved plugin
+routes into its own registry and fixed it, so there the subpath form works too;
+the plugin accepts it, and an `{"action": "..."}` body, on every release.
+
+The routes are also listed on FPP's own API page (`/api/openapi.json`).
 
 A manual takeover or yield pins the primary in standby until *Fail Back* or
 *Clear Manual Standby* is used, so a test failover does not immediately undo
 itself.
 
-## Verified against real FPP
+## Tested FPP releases
 
-The plugin has been run on FPP 10.0 (the official `falconchristmas/fpp:latest`
-image) as three containers - primary, backup and remote - on one network,
-playing a real 2.5-minute, 91k-channel, 40fps `.fseq`.
+`tests/fpp_matrix.sh` runs the plugin inside a real fppd, using the official
+`falconchristmas/fpp:<release>` image as three containers - primary, backup and
+remote - and builds it against that release's own headers. With a real `.fseq`
+it also runs the hot-standby test. Each release below passed all 17 checks,
+playing a real 3-minute, 93k-channel, 40fps sequence:
 
-Verified there: building against the real headers; loading and unloading into a
-live `fppd` with no restart; peer discovery; the hold playlist blocking the
-standby's scheduler; cold failover resuming at the item the primary was on;
-graceful fail-back at an item boundary; the witness check vetoing a takeover and
-then releasing it when its evidence went stale; MultiSync heartbeats; and the
-content pipeline's check, promote, snapshot and rollback against FPP's own rsync
-daemon.
+| FPP | Subpath route `/failover/status` | Hot standby | Result |
+|---|---|---|---|
+| 10.0 | 404 (query form used) | position never went backwards | 17 / 17 |
+| 10.1.2 | 404 (query form used) | position never went backwards | 17 / 17 |
+| 10.2 | 200 | position never went backwards | 17 / 17 |
 
-**Hot standby, measured.** With the backup booted in Remote mode and mirroring a
-real sequence, the primary was killed 16 seconds into the song. An independent
-remote node was sampled once a second throughout:
+The checks: the plugin builds against that release's headers; loads into a
+running fppd with no restart; answers on the query route on every release and on
+the subpath route from 10.2; its API docs merge into FPP's spec at the right
+path; the two players discover each other; a backup booted in Remote mode
+reports hot standby; witness discovery finds the remote; all three nodes play
+the real sequence; the primary is killed mid-song and an independent remote,
+sampled once a second, shows the sync source move to the backup while its
+playback position never goes backwards; the takeover happens once with no flap;
+the backup's on-disk mode stays Remote; and twelve immediate unload/reload
+cycles on the backup, while its output thread is calling the plugin every
+frame, leave fppd running and the plugin answering.
+
+A typical hot-standby trace, from FPP 10.2 - the remote's position in seconds,
+and the last octet of whoever it is taking sync from:
 
 ```
-t+5s   playing HotChocolate.fseq  21s  master=172.20.0.2
-t+7s   playing HotChocolate.fseq  23s  master=172.20.0.2   <- primary killed
-t+8s   playing HotChocolate.fseq  24s  master=172.20.0.3   <- backup is now the source
-t+9s   playing HotChocolate.fseq  25s  master=172.20.0.3
+remote position: 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33
+sync source    : 10 10 10 10 10 10 11 11 11 11 11 11 11 11 11 11 11 11 11 11
+                                   ^ primary (.10) killed, backup (.11) takes over
 ```
 
-The sync source changed in about two seconds and the playback position never
-went backwards: the song did not restart, and the remote followed straight
-through the swap. When that sequence reached its end, the backup's own playlist
-picked up the next item and the remote followed that too, with the on-disk mode
-still reading `remote` the whole time.
+Earlier rounds also covered cold failover resuming at the item the primary was
+on, graceful fail-back at an item boundary, the witness check vetoing a takeover
+and releasing it when its evidence went stale, and the content pipeline's
+check, promote, snapshot and rollback against FPP's own rsync daemon.
+
+Containers on one Docker bridge have near-zero packet loss and drive no real
+output hardware, so the takeover times here are a floor. Bench-test two real
+players before relying on this for a show.
 
 ## Things to know
 

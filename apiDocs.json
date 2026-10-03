@@ -1,95 +1,65 @@
 {
     "paths": {
-        "/api/plugin-apis/failover": {
+        "/failover": {
             "get": {
-                "summary": "fpp-failover: current role, state, peer health, player position, heard players and recent events",
-                "responses": {
-                    "200": {
-                        "description": "Status JSON"
+                "summary": "fpp-failover status: role, state, peer health, player position, heard players, content pipeline and recent events",
+                "description": "Served at /api/plugin-apis/failover. The action may be omitted or given as ?action=status. The action is a query parameter rather than a path segment because FPP 10.0 to 10.1.x do not dispatch subpaths of a plugin route that was loaded at runtime; FPP 10.2 fixed that, so /api/plugin-apis/failover/status also works there.",
+                "parameters": [
+                    {
+                        "name": "action",
+                        "in": "query",
+                        "required": false,
+                        "schema": { "type": "string", "enum": ["status"], "default": "status" }
                     }
+                ],
+                "responses": {
+                    "200": { "description": "Status JSON" }
                 }
-            }
-        },
-        "/api/plugin-apis/failover?action=takeover": {
+            },
             "post": {
-                "summary": "fpp-failover: become the active player. Body {\"graceful\": true} waits for the peer's current item to end; false stops the peer immediately",
-                "responses": {
-                    "200": {
-                        "description": "Request queued"
+                "summary": "fpp-failover actions",
+                "description": "Served at /api/plugin-apis/failover?action=<action>, with an optional JSON body. Player actions (takeover, yield, failback, resume) need the node to be a primary or backup; content actions (promoteContent, checkContent, rollbackContent) need a backup or remote. requestHandoff is node-to-node and returns {accepted, playlist, nextIndex, endsInMs}. Bodies: takeover {\"graceful\": true|false, \"manual\": true}; yield {\"manual\": true} pins a primary in standby until fail-back; rollbackContent {\"snapshot\": \"<id>|latest\", \"target\": \"local|primary|both\"}, and rolling back the primary snapshots its current content first.",
+                "parameters": [
+                    {
+                        "name": "action",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "takeover",
+                                "yield",
+                                "failback",
+                                "resume",
+                                "promoteContent",
+                                "checkContent",
+                                "rollbackContent",
+                                "requestHandoff"
+                            ]
+                        }
                     }
-                }
-            }
-        },
-        "/api/plugin-apis/failover?action=yield": {
-            "post": {
-                "summary": "fpp-failover: stop running the show and stand by. Body {\"manual\": true} pins a primary in standby until fail-back",
-                "responses": {
-                    "200": {
-                        "description": "Request queued"
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "graceful": { "type": "boolean", "description": "takeover: wait for the peer's current item to end (true) or stop it now (false)" },
+                                    "manual": { "type": "boolean", "description": "takeover/yield: pin a primary in standby until fail-back" },
+                                    "snapshot": { "type": "string", "description": "rollbackContent: snapshot id, or latest" },
+                                    "target": { "type": "string", "enum": ["local", "primary", "both"], "description": "rollbackContent: where to restore" }
+                                }
+                            }
+                        }
                     }
-                }
-            }
-        },
-        "/api/plugin-apis/failover?action=failback": {
-            "post": {
-                "summary": "fpp-failover: return the show to the primary player (graceful, at the end of the current item)",
+                },
                 "responses": {
-                    "200": {
-                        "description": "Request queued"
-                    }
-                }
-            }
-        },
-        "/api/plugin-apis/failover?action=resume": {
-            "post": {
-                "summary": "fpp-failover: clear the manual standby flag without forcing a takeover",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/api/plugin-apis/failover?action=promoteContent": {
-            "post": {
-                "summary": "fpp-failover: snapshot the current stable content, then pull the primary's content over it (backup or remote). /syncContent is an alias",
-                "responses": {
-                    "200": {
-                        "description": "Promote queued"
-                    },
-                    "409": {
-                        "description": "Wrong role, or a content job is already running"
-                    }
-                }
-            }
-        },
-        "/api/plugin-apis/failover?action=checkContent": {
-            "post": {
-                "summary": "fpp-failover: dry run listing what a promote would change; result appears under contentSync.pending in /status",
-                "responses": {
-                    "200": {
-                        "description": "Check queued"
-                    }
-                }
-            }
-        },
-        "/api/plugin-apis/failover?action=rollbackContent": {
-            "post": {
-                "summary": "fpp-failover: restore a snapshot. Body {\"snapshot\": \"<id>|latest\", \"target\": \"local|primary|both\"}. Rolling back the primary snapshots its current content first",
-                "responses": {
-                    "200": {
-                        "description": "Rollback queued"
-                    }
-                }
-            }
-        },
-        "/api/plugin-apis/failover?action=requestHandoff": {
-            "post": {
-                "summary": "fpp-failover (node to node): ask the active player to finish its current item and hand the show over. Returns {accepted, playlist, nextIndex, endsInMs}",
-                "responses": {
-                    "200": {
-                        "description": "Handoff plan"
-                    }
+                    "200": { "description": "Action queued, or for requestHandoff the handoff plan" },
+                    "404": { "description": "Unknown action" },
+                    "405": { "description": "Action needs POST" },
+                    "409": { "description": "Wrong role for this action, or a content job is already running" }
                 }
             }
         }

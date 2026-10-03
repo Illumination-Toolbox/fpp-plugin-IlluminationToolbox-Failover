@@ -66,7 +66,7 @@
 namespace {
 
 const char* const PLUGIN_NAME = "fpp-failover";
-const char* const PLUGIN_VERSION = "1.1.0";
+const char* const PLUGIN_VERSION = "1.2.0";
 const char* const HOLD_PLAYLIST = "fpp-failover-hold";
 const char* const TIMER_NAME = "fpp-failover-tick";
 constexpr long long TICK_MS = 50;
@@ -275,7 +275,27 @@ public:
             Player::INSTANCE.StopNow(1);
             logEvent("Plugin unloading, hold released");
         }
-        return nullptr;
+        // Do not report "done" yet.  This plugin is a ChannelDataPlugin: the
+        // channel output thread calls modifyChannelData() every frame.  FPP
+        // detaches us from that list right after this returns, then destroys us
+        // and - because we declare FPP_PLUGIN_SUPPORTS_UNLOAD - dlclose()s the
+        // library as soon as this predicate is true.
+        //
+        // FPP 10.2 holds a lock across the per-frame walk, so the detach waits
+        // for any in-flight call.  FPP 10.0 to 10.1.x do not: the walk is
+        // unlocked, so a frame that started before the detach can still be
+        // inside modifyChannelData() when the library is unmapped, which is a
+        // jump into unmapped memory.  Returning nullptr (what this used to do)
+        // made FPP destroy and unmap immediately, inside that window.
+        //
+        // Waiting a second lets any such frame finish against a still-live
+        // object - it only reads m_syncSendActive, cleared above, and returns.
+        // A single call takes microseconds and FPP calls a frame slow past
+        // 150 ms, so a second is a wide margin.  It costs nothing on 10.2 but a
+        // slightly later teardown.  The lambda captures no pointer into us, so
+        // it is safe for FPP to run it after we are detached.
+        const long long settleUntil = GetTimeMS() + 1000;
+        return [settleUntil]() { return GetTimeMS() >= settleUntil; };
     }
 
     virtual void registerApis() override {
@@ -1313,19 +1333,33 @@ private:
             }
             return out;
         }
-        // Every FPP instance on the network except us and the peer.  Note this
-        // deliberately does NOT filter on fppMode: MultiSync caches a system's
-        // mode from discovery and that cache goes stale for a long time after
-        // a node changes mode, so a real remote can still read as "player" and
-        // would be dropped here - leaving no witnesses at all.  Filtering is
-        // unnecessary anyway: only a node running this plugin answers the
-        // status endpoint with a "heard" map, and anything else just fails its
-        // one request harmlessly.
+        // Every full FPP instance on the network except us and the peer.  Only a
+        // node running this plugin answers with a "heard" map, so anything
+        // else just fails one request harmlessly; the filter exists to avoid
+        // polling things that are not FPP at all.
+        //
+        // The test is the hardware type: below kSysTypeFalconController (0x80)
+        // is a full FPP instance, at or above it is an external controller or
+        // light (Falcon, WLED, ESPixelStick, and from FPP 10.2 Twinkly).  This
+        // is the same boundary FPP itself uses to decide what counts as an FPP
+        // box.  Two tempting alternatives are both wrong:
+        //  - fppMode: MultiSync caches it from discovery and the cache goes
+        //    stale for a long time after a node changes mode, so a real remote
+        //    can still read as "player" and would be dropped.
+        //  - multiSyncCapable: only becomes true for a system heard via the UDP
+        //    MultiSync ping.  Anything found by HTTP discovery - including FPP
+        //    remotes - is recorded with it false.  HTTP discovery is exactly
+        //    what FPP falls back to when multicast is blocked, so filtering on
+        //    it would leave no witnesses on precisely the networks that most
+        //    need them.
+        // Type 0 (unknown) is excluded: it could be any device that answered.
+        constexpr int kFirstExternalControllerType = 0x80; // kSysTypeFalconController
         Json::Value sys = multiSync->GetSystems(false, false);
         if (sys.isMember("systems")) {
             for (const auto& s : sys["systems"]) {
                 if (s.get("local", 0).asInt()) continue;
-                if (!s.get("multiSyncCapable", 0).asInt()) continue; // not an FPP instance
+                int type = s.get("typeId", 0).asInt();
+                if (type <= 0 || type >= kFirstExternalControllerType) continue;
                 std::string a = s["address"].asString();
                 if (!a.empty() && a != m_peerAddress) out.push_back(a);
             }
