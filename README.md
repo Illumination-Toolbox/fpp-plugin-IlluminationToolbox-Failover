@@ -1,6 +1,7 @@
-# fpp-failover
+# Player Failover plugin for FPP
 
-Hot player failover for the [Falcon Player (FPP)](https://github.com/FalconChristmas/fpp).
+Hot player failover for the [Falcon Player (FPP)](https://github.com/FalconChristmas/fpp),
+part of [Illumination Toolbox](https://illuminationtoolbox.com).
 
 Two FPP players carry the same show. The **primary** runs it. The **backup** runs
 in FPP Remote mode and mirrors the primary frame for frame. When the primary dies
@@ -15,6 +16,12 @@ failovers, and an optional local fallback sequence.
 
 Supports FPP 10.0, 10.1.x and 10.2, and is tested against each release; see
 [Tested FPP releases](#tested-fpp-releases).
+
+Everything stays on your network: the players and remotes talk only to each
+other. With the [Illumination Toolbox plugin](https://github.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox)
+also installed and linked, Control Booth shows which player has the show and
+can take over, yield or fail back from anywhere; see
+[Illumination Toolbox](#illumination-toolbox).
 
 ## How it works
 
@@ -60,11 +67,18 @@ show at the item the peer was last seen playing.
 
 ## Install
 
-Until it is listed in FPP's Plugin Manager, install from the Plugin Manager's
-"Install from URL" with the raw `pluginInfo.json` URL of this repository, or
-clone it into `/home/fpp/media/plugins/fpp-failover` and run
-`scripts/fpp_install.sh`. The install builds `libfpp-failover.so` against the
-running FPP's headers.
+FPP → Content Setup → Plugin Manager → install from the plugin list, or paste
+the address of the plugin's `pluginInfo.json` under *Install from URL*:
+
+```
+https://raw.githubusercontent.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox-Failover/main/pluginInfo.json
+```
+
+Or clone it into `/home/fpp/media/plugins/fpp-plugin-IlluminationToolbox-Failover`
+and run `scripts/fpp_install.sh`. The install builds
+`libfpp-plugin-IlluminationToolbox-Failover.so` against the running FPP's
+headers. Install it on both players, and on any remote that should act as a
+witness or run a fallback sequence.
 
 ## Configure
 
@@ -173,6 +187,20 @@ A manual takeover or yield pins the primary in standby until *Fail Back* or
 *Clear Manual Standby* is used, so a test failover does not immediately undo
 itself.
 
+## Illumination Toolbox
+
+This plugin sends nothing to the internet. The
+[Illumination Toolbox plugin](https://github.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox),
+when it is installed on the same player and linked to your toolbox account,
+reads `GET /api/plugin-apis/failover?action=status` every fifteen seconds and
+relays a trimmed copy - role, state, the other player's name, address and
+health, what is playing, and the last ten events - so Control Booth can show
+which player has the show. With its remote requests turned on, Control Booth
+can also press this plugin's *Take Over*, *Yield* and *Fail Back* buttons for
+you, through the same `POST /api/plugin-apis/failover?action=` calls the status
+page makes. Turn that off in the toolbox plugin and nothing outside your
+network can reach this one.
+
 ## Tested FPP releases
 
 `tests/fpp_matrix.sh` runs the plugin inside a real fppd, using the official
@@ -238,12 +266,12 @@ players before relying on this for a show.
 
 ## Files the plugin touches
 
-- `config/plugin.fpp-failover` — settings
-- `plugindata/fpp-failover/state.json` — epoch and manual-standby flag
+- `config/plugin.fpp-plugin-IlluminationToolbox-Failover` — settings
+- `plugindata/fpp-plugin-IlluminationToolbox-Failover/state.json` — epoch and manual-standby flag
 - `playlists/fpp-failover-hold.json` — the hold playlist (recreated if deleted, removed on uninstall)
-- `plugindata/fpp-failover/sync-status.json`, `sync-pending.json` — last promote/rollback result, last check result
-- `plugindata/fpp-failover/snapshots/<id>/` — rollback points (hard-link copies)
-- `logs/plugin-fpp-failover.log` — event log
+- `plugindata/fpp-plugin-IlluminationToolbox-Failover/sync-status.json`, `sync-pending.json` — last promote/rollback result, last check result
+- `plugindata/fpp-plugin-IlluminationToolbox-Failover/snapshots/<id>/` — rollback points (hard-link copies)
+- `logs/plugin-fpp-plugin-IlluminationToolbox-Failover.log` — event log
 - The media folders, playlists and schedule chosen for content sync (backup and remote only)
 - `MultiSyncMulticast` in FPP's settings is switched on if no MultiSync send method is enabled when the backup first takes over
 

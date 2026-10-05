@@ -2,7 +2,7 @@
     "paths": {
         "/failover": {
             "get": {
-                "summary": "fpp-failover status: role, state, peer health, player position, heard players, content pipeline and recent events",
+                "summary": "Player Failover status: role, state, peer health, player position, heard players, content pipeline and recent events",
                 "description": "Served at /api/plugin-apis/failover. The action may be omitted or given as ?action=status. The action is a query parameter rather than a path segment because FPP 10.0 to 10.1.x do not dispatch subpaths of a plugin route that was loaded at runtime; FPP 10.2 fixed that, so /api/plugin-apis/failover/status also works there.",
                 "parameters": [
                     {
@@ -17,7 +17,7 @@
                 }
             },
             "post": {
-                "summary": "fpp-failover actions",
+                "summary": "Player Failover actions",
                 "description": "Served at /api/plugin-apis/failover?action=<action>, with an optional JSON body. Player actions (takeover, yield, failback, resume) need the node to be a primary or backup; content actions (promoteContent, checkContent, rollbackContent) need a backup or remote. requestHandoff is node-to-node and returns {accepted, playlist, nextIndex, endsInMs}. Bodies: takeover {\"graceful\": true|false, \"manual\": true}; yield {\"manual\": true} pins a primary in standby until fail-back; rollbackContent {\"snapshot\": \"<id>|latest\", \"target\": \"local|primary|both\"}, and rolling back the primary snapshots its current content first.",
                 "parameters": [
                     {

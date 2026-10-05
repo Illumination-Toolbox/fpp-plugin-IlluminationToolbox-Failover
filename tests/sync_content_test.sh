@@ -9,7 +9,7 @@ ROOT=$(mktemp -d /tmp/fosync.XXXXXX)
 PRIM="$ROOT/primary"      # served by the daemon as module "media"
 LOCAL="$ROOT/local"       # MEDIADIR of the backup
 PORT=8873
-mkdir -p "$PRIM/sequences" "$PRIM/playlists" "$PRIM/config" "$LOCAL/logs" "$LOCAL/plugindata/fpp-failover"
+mkdir -p "$PRIM/sequences" "$PRIM/playlists" "$PRIM/config" "$LOCAL/logs" "$LOCAL/plugindata/fpp-plugin-IlluminationToolbox-Failover"
 
 cat > "$ROOT/rsyncd.conf" <<EOF
 pid file = $ROOT/rsyncd.pid
@@ -28,7 +28,7 @@ sleep 1
 
 export FPPDIR="$ROOT/nofpp" MEDIADIR="$LOCAL" LOGDIR="$LOCAL/logs"
 export SYNC_RSYNC_PORT=$PORT SYNC_DIRS=sequences SYNC_PLAYLISTS=1 SYNC_SCHEDULE=1 SYNC_SNAPSHOTS=3 SYNC_DELETE=0
-DATA="$LOCAL/plugindata/fpp-failover"
+DATA="$LOCAL/plugindata/fpp-plugin-IlluminationToolbox-Failover"
 PASS=0; FAIL=0
 check() { if eval "$2"; then echo "PASS: $1"; PASS=$((PASS+1)); else echo "FAIL: $1"; FAIL=$((FAIL+1)); fi; }
 run() { bash "$SCRIPT" 127.0.0.1 "$@"; echo "  -> exit $?"; }
@@ -103,7 +103,7 @@ run promote
 V=$(jget $DATA/sync-status.json ok); check "promote fails cleanly" "[ '$V' = False ]"
 check "failed promote leaves snapshots untouched" "[ $(ls -1 $DATA/snapshots | wc -l) -eq $BEFORE ]"
 
-echo; echo "log tail:"; tail -4 "$LOCAL/logs/plugin-fpp-failover.log"
+echo; echo "log tail:"; tail -4 "$LOCAL/logs/plugin-fpp-plugin-IlluminationToolbox-Failover.log"
 echo; echo "RESULT: $PASS passed, $FAIL failed"
 rm -rf "$ROOT"
 [ $FAIL -eq 0 ]

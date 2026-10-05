@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# fpp-failover content pipeline.  The primary is where new sequences land
+# fpp-plugin-IlluminationToolbox-Failover content pipeline.  The primary is where new sequences land
 # ("cutting edge"); this node keeps the last promoted, known-good set
 # ("stable") and a history of snapshots to roll back to.
 #
@@ -46,12 +46,12 @@ ARG3="$3"
 ARG4="$4"
 
 DIRS="${SYNC_DIRS:-sequences,music,videos,effects,images,scripts}"
-DATADIR="${MEDIADIR}/plugindata/fpp-failover"
+DATADIR="${MEDIADIR}/plugindata/fpp-plugin-IlluminationToolbox-Failover"
 STATUS="${SYNC_STATUS_FILE:-${DATADIR}/sync-status.json}"
 PENDING="${SYNC_PENDING_FILE:-${DATADIR}/sync-pending.json}"
 SNAPDIR="${SYNC_SNAPSHOT_DIR:-${DATADIR}/snapshots}"
 KEEP="${SYNC_SNAPSHOTS:-5}"
-LOG="${LOGDIR}/plugin-fpp-failover.log"
+LOG="${LOGDIR}/plugin-fpp-plugin-IlluminationToolbox-Failover.log"
 LOCK="${DATADIR}/sync.lock"
 
 log() {

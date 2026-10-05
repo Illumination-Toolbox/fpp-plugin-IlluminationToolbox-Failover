@@ -1,18 +1,77 @@
 {
-	"$schema": "https://raw.githubusercontent.com/FalconChristmas/fpp-plugin-Template/master/pluginInfo.schema.json",
-	"repoName": "fpp-failover",
+	"repoName": "fpp-plugin-IlluminationToolbox-Failover",
 	"name": "Player Failover",
-	"author": "James Arrowood",
-	"description": "Hot failover between two FPP players. The backup runs as an FPP remote, mirroring the primary, and when the primary dies it becomes the MultiSync source mid-song without a restart or a gap, then hands the show back when the primary returns. On remotes it shows which player is active, acts as a witness against false failovers, and can run a local fallback sequence when no player is alive.",
-	"homeURL": "https://github.com/jamesarrowood/fpp-failover",
-	"srcURL": "https://github.com/jamesarrowood/fpp-failover.git",
-	"bugURL": "https://github.com/jamesarrowood/fpp-failover/issues",
+	"author": "James Arrowood (Arrowood Enterprises LLC)",
+	"description": "Hot failover between two FPP players, part of Illumination Toolbox. The backup runs as an FPP remote, mirroring the primary, and when the primary dies it becomes the MultiSync source mid-song without a restart or a gap, then hands the show back when the primary returns. On remotes it shows which player is active, acts as a witness against false failovers, and can run a local fallback sequence when no player is alive. It can also keep the backup's sequences, media and playlists in step with the primary through FPP's rsync daemon, promoting changes only once they have proven themselves, with rollback points. Everything stays on your network; with the Illumination Toolbox plugin also installed and linked, Control Booth can show which player has the show and switch it.",
+	"homeURL": "https://github.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox-Failover",
+	"srcURL": "https://github.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox-Failover.git",
+	"bugURL": "https://github.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox-Failover/issues",
+	"iconURL": "https://raw.githubusercontent.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox-Failover/main/icon.png",
 	"allowUpdates": 1,
+	"releaseNotesStyle": "gitHistory",
+	"privacy": {
+		"summary": "Talks only to the other players and remotes on your network that you set up for failover. Nothing goes to the internet.",
+		"sends": [
+			{
+				"to": "http://the other failover player you enter",
+				"what": "a status request every second, and handoff requests when the show changes hands",
+				"why": "so each player knows whether the other is alive and they never both run the show",
+				"alwaysOn": false
+			},
+			{
+				"to": "the FPP players and remotes on your network (MultiSync)",
+				"what": "a heartbeat with this player's name, addresses, role and state",
+				"why": "so remotes can show which player is active and vouch for a player the backup cannot reach",
+				"alwaysOn": false
+			},
+			{
+				"to": "http://the witness remotes on your network",
+				"what": "a request asking whether they still hear the primary",
+				"why": "so a broken link between the players does not cause a false failover",
+				"alwaysOn": false
+			},
+			{
+				"to": "the FPP remotes on your network (MultiSync)",
+				"what": "sequence and media sync packets, while the backup has taken over the show",
+				"why": "so the remotes keep playing in step after the primary dies",
+				"alwaysOn": false
+			},
+			{
+				"to": "the primary player's rsync service",
+				"what": "requests for its file lists and the sequences, media and playlists you chose to sync",
+				"why": "so the backup can play the same show after a failover",
+				"alwaysOn": false
+			}
+		],
+		"collects": [],
+		"sensors": [],
+		"remoteAccess": "none",
+		"systemChanges": [
+			{
+				"kind": "core-settings",
+				"what": "adds a silent hold playlist, fpp-failover-hold, that blocks the schedule while this player stands by; removed on uninstall"
+			},
+			{
+				"kind": "core-settings",
+				"what": "turns on MultiSync multicast when no MultiSync send method is set, so remotes hear this player after a takeover"
+			},
+			{
+				"kind": "core-settings",
+				"what": "switches fppd between Player and Remote mode in memory during a takeover or handoff; the saved mode is not changed"
+			},
+			{
+				"kind": "core-settings",
+				"what": "content sync writes the primary's sequences, media, playlists and schedule into this player's media folders"
+			}
+		],
+		"closedCode": false,
+		"other": "Nothing is sent until you give the player a role on the plugin's page. Its HTTP routes live on FPP's own web server (/api/plugin-apis/failover), so anyone who can reach FPP's pages on your network can read the status or press Take Over, Yield or Fail Back, as they could any FPP button. Content sync never copies settings, channel outputs or network configuration, and never deletes a file unless you turn on Delete extras. Rollback points are hard-link copies kept in the plugin's data folder until you delete them or uninstall. Uninstalling removes the hold playlist and the plugin's data folder. When the Illumination Toolbox plugin is also installed and linked, that plugin, not this one, relays this player's failover status to your toolbox account and can press these buttons for you; see its own privacy notes. Privacy policy: https://www.illuminationtoolbox.com/privacy"
+	},
 	"versions": [
 		{
 			"minFPPVersion": "10.0",
 			"maxFPPVersion": "0",
-			"branch": "master",
+			"branch": "main",
 			"sha": ""
 		}
 	]

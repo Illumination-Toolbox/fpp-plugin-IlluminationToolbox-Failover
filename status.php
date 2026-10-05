@@ -1,9 +1,9 @@
 <?php
-// fpp-failover: status dashboard and configuration.
+// fpp-plugin-IlluminationToolbox-Failover: status dashboard and configuration.
 // $settings, $pluginSettings and the PrintSetting* helpers are provided by
 // FPP's plugin.php wrapper.
 
-$pluginName = 'fpp-failover';
+$pluginName = 'fpp-plugin-IlluminationToolbox-Failover';
 
 $roleOptions = array(
     'Off (plugin idle)' => 'off',

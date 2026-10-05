@@ -1,5 +1,5 @@
 /*
- * fpp-failover - automatic player failover for the Falcon Player (FPP)
+ * fpp-plugin-IlluminationToolbox-Failover - automatic player failover for the Falcon Player (FPP)
  *
  * Two FPP players, a "primary" and a "backup", carry identical content and
  * schedules.  Exactly one runs the show at a time.
@@ -65,8 +65,8 @@
 
 namespace {
 
-const char* const PLUGIN_NAME = "fpp-failover";
-const char* const PLUGIN_VERSION = "1.2.0";
+const char* const PLUGIN_NAME = "fpp-plugin-IlluminationToolbox-Failover";
+const char* const PLUGIN_VERSION = "1.3.0";
 const char* const HOLD_PLAYLIST = "fpp-failover-hold";
 const char* const TIMER_NAME = "fpp-failover-tick";
 constexpr long long TICK_MS = 50;
@@ -202,8 +202,8 @@ public:
         FPPPlugins::Plugin(PLUGIN_NAME, true),
         FPPPlugins::APIProviderPlugin(),
         FPPPlugins::ChannelDataPlugin() {
-        m_logFile = FPP_DIR_MEDIA("/logs/plugin-fpp-failover.log");
-        m_dataDir = FPP_DIR_MEDIA("/plugindata/fpp-failover");
+        m_logFile = FPP_DIR_MEDIA("/logs/plugin-fpp-plugin-IlluminationToolbox-Failover.log");
+        m_dataDir = FPP_DIR_MEDIA("/plugindata/fpp-plugin-IlluminationToolbox-Failover");
         m_stateFile = m_dataDir + "/state.json";
         std::error_code ec;
         std::filesystem::create_directories(m_dataDir, ec);
@@ -264,7 +264,7 @@ public:
             // player mode, because the show is mid-flight and cannot be moved.
             setSetting("restartFlag", "1");
             WarningHolder::AddWarningTimeout(3600, WARN_ID_SYNC,
-                                             "fpp-failover was unloaded while acting as the player; "
+                                             "Player Failover was unloaded while acting as the player; "
                                              "restart fppd to return this node to Remote mode",
                                              {}, PLUGIN_NAME);
             logEvent("Plugin unloading while acting as player - on-disk mode left as configured, fppd restart needed");
@@ -339,7 +339,7 @@ public:
     virtual void ReceivedMediaSyncPacket(const std::string&, float) override { noteSync(); }
     virtual void ReceivedMediaSyncStopPacket(const std::string&) override { noteSync(); }
 
-    // Heartbeat packets from other fpp-failover nodes arrive here.
+    // Heartbeat packets from other Player Failover nodes arrive here.
     virtual void multiSyncData(const uint8_t* data, int len) override {
         if (!data || len <= 0) return;
         std::string s((const char*)data, strnlen((const char*)data, len));
@@ -696,7 +696,7 @@ private:
     // Logging
     // ------------------------------------------------------------------
     void logEvent(const std::string& msg) {
-        LogInfo(VB_PLUGIN, "fpp-failover: %s\n", msg.c_str());
+        LogInfo(VB_PLUGIN, "Player Failover: %s\n", msg.c_str());
         std::string line = timestamp() + " " + msg;
         {
             std::unique_lock<std::mutex> l(m_eventsLock);
@@ -766,7 +766,7 @@ private:
         if (FileExists(file)) return;
         Json::Value pl;
         pl["name"] = HOLD_PLAYLIST;
-        pl["desc"] = "Standby hold playlist created by the fpp-failover plugin. Do not edit or delete.";
+        pl["desc"] = "Standby hold playlist created by the Player Failover plugin. Do not edit or delete.";
         pl["version"] = 4;
         pl["repeat"] = 1;
         pl["loopCount"] = 0;
@@ -779,7 +779,7 @@ private:
         entry["enabled"] = 1;
         entry["playOnce"] = 0;
         entry["duration"] = 3600;
-        entry["note"] = "fpp-failover standby hold";
+        entry["note"] = "Player Failover standby hold";
         Json::Value main(Json::arrayValue);
         main.append(entry);
         pl["mainPlaylist"] = main;
@@ -817,7 +817,7 @@ private:
         ensureHoldPlaylistFile();
         Player::INSTANCE.StartPlaylist(HOLD_PLAYLIST, 1, -1, -1, 1000, false);
         m_holdStartedMS = GetTimeMS();
-        LogDebug(VB_PLUGIN, "fpp-failover: hold playlist started\n");
+        LogDebug(VB_PLUGIN, "Player Failover: hold playlist started\n");
     }
 
     void stopHold() {
@@ -1241,7 +1241,7 @@ private:
             } else {
                 m_peer.failCount++;
                 m_peer.okCount = 0;
-                LogDebug(VB_PLUGIN, "fpp-failover: peer poll failed rc=%d\n", rc);
+                LogDebug(VB_PLUGIN, "Player Failover: peer poll failed rc=%d\n", rc);
             }
         }, PLUGIN_NAME);
     }
@@ -1452,7 +1452,7 @@ private:
 
     void remoteTick(long long now) {
         if (getFPPmode() != REMOTE_MODE) {
-            setWarning(WARN_ID_MODE, "fpp-failover: role 'remote' requires FPP Remote mode");
+            setWarning(WARN_ID_MODE, "Player Failover: role 'remote' requires FPP Remote mode");
             return;
         }
         clearWarning(WARN_ID_MODE);
@@ -1501,25 +1501,25 @@ private:
     void checkPlayerRoleWarnings() {
         if (m_role == Role::Primary) {
             if (getFPPmode() != PLAYER_MODE) {
-                setWarning(WARN_ID_MODE, "fpp-failover: role 'primary' requires FPP Player mode");
+                setWarning(WARN_ID_MODE, "Player Failover: role 'primary' requires FPP Player mode");
             } else {
                 clearWarning(WARN_ID_MODE);
             }
         } else if (m_role == Role::Backup) {
             if (!m_bootedRemote) {
-                setWarning(WARN_ID_MODE, "fpp-failover: backup is in Player mode, so standby is cold (hold playlist). "
+                setWarning(WARN_ID_MODE, "Player Failover: backup is in Player mode, so standby is cold (hold playlist). "
                                          "Set FPP mode to Remote and restart fppd for hot standby");
             } else {
                 clearWarning(WARN_ID_MODE);
             }
         }
         if (getFPPmode() == PLAYER_MODE && !m_forcePlayerMode && !multiSync->isMultiSyncEnabled()) {
-            setWarning(WARN_ID_MULTISYNC, "fpp-failover: MultiSync is disabled on this player; remotes will not follow it");
+            setWarning(WARN_ID_MULTISYNC, "Player Failover: MultiSync is disabled on this player; remotes will not follow it");
         } else {
             clearWarning(WARN_ID_MULTISYNC);
         }
         if (m_peerAddress.empty()) {
-            setWarning(WARN_ID_PEER, "fpp-failover: no peer address configured");
+            setWarning(WARN_ID_PEER, "Player Failover: no peer address configured");
         } else if (m_warnings[WARN_ID_PEER].find("no peer") != std::string::npos) {
             clearWarning(WARN_ID_PEER);
         }
@@ -1575,7 +1575,7 @@ private:
 
         if (!alive && !m_peerWarned && !noPeerConfigured) {
             m_peerWarned = true;
-            setWarning(WARN_ID_PEER, "fpp-failover: peer " + m_peerAddress + " is unreachable");
+            setWarning(WARN_ID_PEER, "Player Failover: peer " + m_peerAddress + " is unreachable");
         }
 
         switch (m_state) {

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# fpp-failover install script: build the native plugin against the running
+# fpp-plugin-IlluminationToolbox-Failover install script: build the native plugin against the running
 # FPP's headers.  Safe to re-run (Reinstall All Plugins / plugin update).
 
 : "${FPPDIR:=/opt/fpp}"

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Run the fpp-failover plugin inside a real fppd, against one FPP release.
+# Run the fpp-plugin-IlluminationToolbox-Failover plugin inside a real fppd, against one FPP release.
 #
 #   bash tests/fpp_matrix.sh <fpp-image-tag> [real.fseq]
 #   bash tests/fpp_matrix.sh 10.1.2
@@ -88,18 +88,18 @@ file_setting() {
 }
 
 install_plugin() {
-    local d="$LAB/$1/media/plugins/fpp-failover"
+    local d="$LAB/$1/media/plugins/fpp-plugin-IlluminationToolbox-Failover"
     mkdir -p "$d"
     rsync -a --delete --exclude '.git' --exclude '*.o' --exclude '*.so' --exclude 'tests' "$REPO/" "$d/"
 }
 
 build_plugin() {
-    dx "$1" 'cd /home/fpp/media/plugins/fpp-failover && make SRCDIR=/opt/fpp/src 2>&1 | grep -E " error|Error [0-9]"; chown -R fpp:fpp /home/fpp/media/plugins/fpp-failover; test -f libfpp-failover.so'
+    dx "$1" 'cd /home/fpp/media/plugins/fpp-plugin-IlluminationToolbox-Failover && make SRCDIR=/opt/fpp/src 2>&1 | grep -E " error|Error [0-9]"; chown -R fpp:fpp /home/fpp/media/plugins/fpp-plugin-IlluminationToolbox-Failover; test -f libfpp-plugin-IlluminationToolbox-Failover.so'
 }
 
-load_plugin()   { dx "$1" 'curl -s -m 30 -X POST http://127.0.0.1:32322/fppd/plugin/fpp-failover/load >/dev/null 2>&1'; }
-unload_plugin() { dx "$1" 'curl -s -m 30 -X POST http://127.0.0.1:32322/fppd/plugin/fpp-failover/unload >/dev/null 2>&1'; }
-psetting()      { dx "$1" "curl -s -m 10 -X PUT -d '$3' 'http://127.0.0.1/api/plugin/fpp-failover/settings/$2' >/dev/null"; }
+load_plugin()   { dx "$1" 'curl -s -m 30 -X POST http://127.0.0.1:32322/fppd/plugin/fpp-plugin-IlluminationToolbox-Failover/load >/dev/null 2>&1'; }
+unload_plugin() { dx "$1" 'curl -s -m 30 -X POST http://127.0.0.1:32322/fppd/plugin/fpp-plugin-IlluminationToolbox-Failover/unload >/dev/null 2>&1'; }
+psetting()      { dx "$1" "curl -s -m 10 -X PUT -d '$3' 'http://127.0.0.1/api/plugin/fpp-plugin-IlluminationToolbox-Failover/settings/$2' >/dev/null"; }
 setting()       { dx "$1" "curl -s -m 10 -X PUT -d '$3' 'http://127.0.0.1/api/settings/$2' >/dev/null"; }
 
 start_rsyncd() {
@@ -115,7 +115,7 @@ write_playlist() {
 EOF
 }
 
-echo "=== fpp-failover on ${IMAGE} (version code ${VER}) ==="
+echo "=== fpp-plugin-IlluminationToolbox-Failover on ${IMAGE} (version code ${VER}) ==="
 docker info >/dev/null 2>&1 || { echo "Docker is not running"; exit 2; }
 docker image inspect "$IMAGE" >/dev/null 2>&1 || docker pull -q "$IMAGE" >/dev/null || { echo "cannot pull $IMAGE"; exit 2; }
 cleanup
@@ -169,7 +169,7 @@ for n in primary backup remote; do load_plugin "$n"; done
 sleep 12
 for n in primary backup remote; do
     r=$(status_field "$n" plugin)
-    [ "$r" = "fpp-failover" ] && pass "$n: loads into a running fppd, no restart" || fail "$n: plugin not answering after live load"
+    [ "$r" = "fpp-plugin-IlluminationToolbox-Failover" ] && pass "$n: loads into a running fppd, no restart" || fail "$n: plugin not answering after live load"
 done
 
 # ---------------------------------------------------------------- 3. HTTP routes
@@ -247,7 +247,7 @@ sys.exit(0 if (mono and switched and len(pos)>=10) else 1)
 PY
     then pass "hot standby: primary killed mid-song, backup took over as sync source, position never went backwards"
     else fail "hot standby: song restarted or the sync source never moved to the backup"; fi
-    log=$(dx backup 'grep -c "YIELDED" /home/fpp/media/logs/plugin-fpp-failover.log' 2>/dev/null)
+    log=$(dx backup 'grep -c "YIELDED" /home/fpp/media/logs/plugin-fpp-plugin-IlluminationToolbox-Failover.log' 2>/dev/null)
     [ "${log:-0}" = "0" ] && pass "hot standby: single clean takeover, no flap" || fail "hot standby: backup yielded during the takeover ($log times)"
     m=$(dx backup "grep -m1 '^fppMode' /home/fpp/media/settings")
     printf '%s' "$m" | grep -q remote && pass "backup on-disk mode still Remote after takeover" || fail "backup on-disk mode changed: $m"
@@ -268,7 +268,7 @@ for i in $(seq 1 $cycles); do
 done
 sleep 4
 r=$(status_field "$TARGET" plugin)
-[ $ok = 1 ] && [ "$r" = "fpp-failover" ] && pass "$TARGET: ${cycles} immediate unload/reload cycles, fppd alive, plugin answering" \
+[ $ok = 1 ] && [ "$r" = "fpp-plugin-IlluminationToolbox-Failover" ] && pass "$TARGET: ${cycles} immediate unload/reload cycles, fppd alive, plugin answering" \
                                         || fail "$TARGET: fppd died or plugin missing during unload/reload cycling (cycle $i)"
 
 echo

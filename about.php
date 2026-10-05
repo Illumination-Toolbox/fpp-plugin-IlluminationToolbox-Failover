@@ -31,7 +31,7 @@
                 <li>If the backup's outputs go to the same controllers as the primary's, both send while the backup mirrors. Give the backup's E1.31 universes a lower priority, or leave its outputs off, unless the backup drives its own lights.</li>
                 <li>Cold takeovers resume at item granularity: the current song restarts on the remotes.</li>
                 <li>Do not delete the <code>fpp-failover-hold</code> playlist; the plugin recreates it if it is missing and removes it on uninstall.</li>
-                <li>Everything the plugin does is written to <code>plugin-fpp-failover.log</code> in the FPP log viewer.</li>
+                <li>Everything the plugin does is written to <code>plugin-fpp-plugin-IlluminationToolbox-Failover.log</code> in the FPP log viewer.</li>
             </ul>
         </div>
     </fieldset>
@@ -40,12 +40,14 @@
         <legend>Player Failover - Info</legend>
         <div class="p-2">
             <div id='credits'>
-                <b>Developed by:</b><br />
+                Part of <a href='https://illuminationtoolbox.com' target='_blank' rel='noopener'>Illumination Toolbox</a>.
+                Everything this plugin does stays on your network. With the Illumination Toolbox plugin also installed and
+                linked, Control Booth shows which player has the show and can take over, yield or fail back for you.<br />
                 <br />
-                James Arrowood<br />
+                <b>Developed by:</b> James Arrowood (Arrowood Enterprises LLC)<br />
                 <br />
-                <a href='https://github.com/jamesarrowood/fpp-failover'>Git Repository</a><br>
-                <a href='https://github.com/jamesarrowood/fpp-failover/issues'>Bug Reporter</a><br>
+                <a href='https://github.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox-Failover'>Git Repository</a><br>
+                <a href='https://github.com/Illumination-Toolbox/fpp-plugin-IlluminationToolbox-Failover/issues'>Bug Reporter</a><br>
                 <br />
             </div>
         </div>

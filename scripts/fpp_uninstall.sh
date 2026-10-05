@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# fpp-failover uninstall script.  Safe to run more than once.
+# fpp-plugin-IlluminationToolbox-Failover uninstall script.  Safe to run more than once.
 
 : "${FPPDIR:=/opt/fpp}"
 . "${FPPDIR}/scripts/common" 2>/dev/null || true
@@ -11,6 +11,6 @@
 rm -f "${MEDIADIR}/playlists/fpp-failover-hold.json"
 
 # Plugin state (epoch, manual standby flag).
-rm -rf "${MEDIADIR}/plugindata/fpp-failover"
+rm -rf "${MEDIADIR}/plugindata/fpp-plugin-IlluminationToolbox-Failover"
 
 exit 0

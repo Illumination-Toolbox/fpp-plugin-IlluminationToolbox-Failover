@@ -1,6 +1,6 @@
 <?php
 
-# fpp-failover menu entries: one per menu area at most.
+# fpp-plugin-IlluminationToolbox-Failover menu entries: one per menu area at most.
 $menuEntries = Array(
 	Array(
 		'text' => 'Player Failover',
